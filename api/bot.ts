@@ -1,88 +1,21 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import axios from "axios";
 import { Telegraf } from "telegraf";
-import { AuthResponse, UserAuthState } from "../UserState";
-import {
-  APIResponse,
-  CallsStartResponse,
-  isErrorResponse,
-  proxyAgent,
-} from "../api";
+import { AuthApi } from "../AuthApi";
+import { APIResponse, CallsStartResponse, isErrorResponse } from "../api";
 import logger from "../logger";
-import { kv } from "@vercel/kv";
-import { generate } from "@iamnnort/smart-id";
 
 const bot = new Telegraf(process.env.BOT_TOKEN as string);
-const customAxios = axios.create({
-  httpsAgent: proxyAgent,
-  httpAgent: proxyAgent,
-});
-
-customAxios.interceptors.response.use(async (response) => {
-  const telegramId = response.config.params.context.id;
-  const userState = new UserAuthState(telegramId);
-
-  if (
-    isErrorResponse(response.data) &&
-    response.data.error.error_msg.includes("access_token has expired.") &&
-    typeof telegramId === "number"
-  ) {
-    logger.error(
-      `Catch error in interceptors: ${JSON.stringify(response.data)}`
-    );
-    const allState = await userState.getAll();
-    logger.info(`allState in interceptors: ${JSON.stringify(allState)}`);
-    if (allState) {
-      const { data } = await axios.post<AuthResponse>(
-        "https://id.vk.com/oauth2/auth",
-        {
-          grant_type: "refresh_token",
-          refresh_token: allState.refresh_token,
-          client_id: process.env.CLIENT_ID,
-          device_id: allState.device_id,
-          state: allState.state,
-          ip: process.env.PROXY_ADDRESS,
-          redirect_uri: "https://telegram-calls.dimensi.dev/verify",
-        },
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          httpAgent: proxyAgent,
-          httpsAgent: proxyAgent,
-        }
-      );
-      logger.info(`Update auth token ${JSON.stringify(data)}`);
-      if (!isErrorResponse(data)) {
-        await userState.save({ ...allState, ...data });
-        return axios({
-          ...response.config,
-          params: {
-            ...response.config.params,
-            access_token: data.access_token,
-          },
-        });
-      }
-    }
-  }
-  return response;
-});
 
 bot.command("start", async (ctx) => {
   const chatId = ctx.message.chat.id;
-  const authKey = generate();
-
-  logger.info(`Отвечаю на auth: ${chatId}`);
+  const authApi = new AuthApi(chatId);
 
   logger.info(`Received /auth command with parameter from user ${chatId}`);
-
-  const authUrl = `https://telegram-calls.dimensi.dev/auth?user_state=${authKey}`;
-  await kv.set(`user_state:${authKey}`, chatId);
 
   try {
     await ctx.telegram.sendMessage(
       chatId,
-      `Для авторизации, пожалуйста, перейдите по следующей ссылке: ${authUrl}`
+      `Для авторизации, пожалуйста, перейдите по следующей ссылке: ${await authApi.generateAuthUrl()}`
     );
   } catch (err) {
     logger.error(err);
@@ -93,15 +26,14 @@ bot.command("start", async (ctx) => {
 bot.on("inline_query", async (ctx) => {
   const id = ctx.from.id;
   logger.info(`Inline query received from user ${ctx.from.id}`);
-
-  const userAuthState = new UserAuthState(id);
+  const authApi = new AuthApi(id);
   const [authToken, userId] = await Promise.all([
-    userAuthState.get("access_token"),
-    userAuthState.get("user_id"),
+    authApi.getAuthToken(),
+    authApi.getVKUserId(),
   ]);
 
   logger.info(`User ${id} state: ${authToken}, ${userId}`);
-  if (!authToken) {
+  if (!authToken || !userId) {
     await bot.telegram.answerInlineQuery(ctx.inlineQuery.id, [], {
       cache_time: 0,
       button: { text: "Авторизоваться", start_parameter: "auth" },
@@ -113,17 +45,15 @@ bot.on("inline_query", async (ctx) => {
 
   try {
     const name = ctx.inlineQuery.query || "Новый звонок"; // Название звонка, можете заменить на желаемое
-    const response = await customAxios.get<APIResponse<CallsStartResponse>>(
-      "https://api.vk.com/method/calls.start",
+    const axios = authApi.getAxios();
+    const response = await axios.get<APIResponse<CallsStartResponse>>(
+      "calls.start",
       {
         params: {
           user_id: userId,
           v: "5.131",
           access_token: authToken,
           name,
-          context: {
-            id,
-          },
         },
       }
     );

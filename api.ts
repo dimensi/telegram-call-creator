@@ -112,7 +112,7 @@ export const isErrorResponse = (data: any): data is ErrorResponse => {
 
 export const proxyAgent = new HttpsProxyAgent(`http://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${process.env.PROXY_ADDRESS}:${process.env.PROXY_PORT}`)
 
-interface User {
+export interface User {
   user_id: string; // Идентификатор пользователя.
   first_name: string; // Имя пользователя.
   last_name: string; // Первая буква фамилии пользователя.
