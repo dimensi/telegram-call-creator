@@ -5,68 +5,34 @@ import { Telegraf } from "telegraf";
 import { AuthResponse, UserAuthState } from "../UserState";
 import logger from "../logger";
 import { proxyAgent, UserResponse } from "../api";
+import { AuthApi } from "../AuthApi";
 
 const bot = new Telegraf(process.env.BOT_TOKEN as string);
 
 export default async (req: VercelRequest, res: VercelResponse) => {
   const { query } = req;
-  const state = String(query.state);
-  const codeVerifier = await kv.getdel(`challenge:${state}`);
-
-  if (!codeVerifier) {
-    return res.redirect("https://vkcallsBot.t.me/");
+  const authId = String(query.state);
+  const authApi = await AuthApi.retriveAuthState(authId);
+  if (!authApi) {
+    return res.send("Invalid authId");
   }
 
-  console.log("codeVerifier: ", { codeVerifier });
-
   try {
-    const { data } = await axios.post<Omit<AuthResponse, "device_id">>(
-      "https://id.vk.com/oauth2/auth",
-      {
-        grant_type: "authorization_code",
-        code_verifier: codeVerifier,
-        code: String(query.code),
-        client_id: process.env.CLIENT_ID,
-        device_id: String(query.device_id),
-        redirect_uri: "https://telegram-calls.dimensi.dev/verify",
-        state: state,
-        ip: process.env.PROXY_ADDRESS,
-      },
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        httpAgent: proxyAgent,
-        httpsAgent: proxyAgent,
-      }
+    const authResponse = await authApi.verifyAuth(
+      authId,
+      String(query.code),
+      String(query.device_id)
     );
 
-    logger.info(`"ouath2/auth response data: ${JSON.stringify(data)}"`);
-    const userId = await kv.getdel(`user_state:${state}`);
-    const userState = new UserAuthState(userId as string);
-    await userState.save(
-      Object.assign(data, { device_id: String(query.device_id) })
-    );
-    const userInfo = await axios.post<UserResponse>(
-      "https://id.vk.com/oauth2/public_info",
-      {
-        client_id: process.env.CLIENT_ID,
-        id_token: data.id_token,
-      },
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        httpAgent: proxyAgent,
-        httpsAgent: proxyAgent,
-      }
-    );
+    logger.info(`"ouath2/auth response data: ${JSON.stringify(authResponse)}"`);
 
-    logger.info(`"response data: ${JSON.stringify(userInfo.data)}"`);
+    const user = await authApi.getUserInfo();
+
+    logger.info(`"response data: ${JSON.stringify(user)}"`);
 
     await bot.telegram.sendMessage(
-      userId as string,
-      `Вы авторизовались как ${userInfo.data.user.first_name} ${userInfo.data.user.last_name}
+      authApi.userId,
+      `Вы авторизовались как ${user.first_name} ${user.last_name}
 
 Для создания звонка напишите в любом диалоге и чате @vkcallsBot, пробел, название звонка.
 
@@ -74,9 +40,14 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
 @vkcallsBot Обсудим важные дела`
     );
+
     res.redirect("https://vkcallsBot.t.me/");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Internal Server Error");
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      logger.error(error.message);
+      res.status(500).send(`Error: ${error.message}`);
+    } else {
+      res.send("Internal Server Error");
+    }
   }
 };

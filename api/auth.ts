@@ -1,7 +1,5 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { URL } from "url";
-import pkceChallenge from "../pkceChallenge";
-import { kv } from "@vercel/kv";
+import { AuthApi } from "../AuthApi";
 
 export default async (req: VercelRequest, res: VercelResponse) => {
   const { user_state } = req.query;
@@ -11,30 +9,16 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     return;
   }
 
-  const savedState = await kv.get(`user_state:${user_state}`);
-  if (!savedState) {
+  const authId = String(user_state);
+  const authApi = await AuthApi.retriveAuthState(authId);
+  if (!authApi) {
     res.status(400).send("invalid user_state");
     return;
   }
 
-  const userState = String(user_state);
-
   try {
-    const challenge = await pkceChallenge();
-    await kv.set(`challenge:${userState}`, challenge.code_verifier);
-
-    const redirectUrl = new URL("https://id.vk.com/authorize");
-    const query = redirectUrl.searchParams;
-    query.append("response_type", "code");
-    query.append("client_id", process.env.CLIENT_ID as string);
-    query.append("redirect_uri", "https://telegram-calls.dimensi.dev/verify");
-    query.append("scope", "email phone");
-    query.append("state", userState);
-    query.append("code_challenge", challenge.code_challenge);
-    query.append("code_challenge_method", "s256");
-    query.append("ip", process.env.PROXY_ADDRESS as string);
-
-    res.redirect(redirectUrl.toString());
+    const authUrl = await authApi.initiateAuth(authId);
+    res.redirect(authUrl);
   } catch (error) {
     console.error(error);
     res.status(500).send("Internal Server Error");
