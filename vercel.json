@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "/auth", "dest": "/api/auth.ts" },
+    { "src": "/verify", "dest": "/api/verify.ts" },
+    { "src": "/api/bot", "dest": "/api/bot.ts" }
+  ]
+}
