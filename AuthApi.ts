@@ -21,7 +21,7 @@ export class AuthApi {
 
   async generateAuthUrl(): Promise<string> {
     const authId = generate();
-    await kv.set(`telegram_id:${authId}`, this.userAuthState);
+    await kv.set(`telegram_id:${authId}`, this.userId);
     return `https://telegram-calls.dimensi.dev/auth?user_state=${authId}`;
   }
 
