@@ -186,8 +186,7 @@ export class AuthApi {
     return this.userAuthState.get("access_token");
   }
 
-  async getVKUserId(): Promise<number | null> {
-    const vkid = this.userAuthState.get("user_id");
-    return vkid ? Number(vkid) : null;
+  async getVKUserId() {
+    return this.userAuthState.get("user_id");
   }
 }
