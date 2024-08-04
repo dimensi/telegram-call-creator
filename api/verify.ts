@@ -10,10 +10,11 @@ import { AuthApi } from "../AuthApi";
 const bot = new Telegraf(process.env.BOT_TOKEN as string);
 
 export default async (req: VercelRequest, res: VercelResponse) => {
+  
   const { query } = req;
   const authId = String(query.state);
   const authApi = await AuthApi.retriveAuthState(authId);
-  if (!authApi) {
+  if (!req.destroyed && !authApi) {
     return res.send("Invalid authId");
   }
 
