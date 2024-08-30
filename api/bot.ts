@@ -23,6 +23,73 @@ bot.command("start", async (ctx) => {
   }
 });
 
+bot.command("create", async (ctx) => {
+  const chatId = ctx.message.chat.id;
+  const authApi = new AuthApi(chatId);
+  const [authToken, userId] = await Promise.all([
+    authApi.getAuthToken(),
+    authApi.getVKUserId(),
+  ]);
+
+  logger.info(`User ${chatId} state: ${authToken}, ${userId}`);
+  if (!authToken || !userId) {
+    await bot.telegram.sendMessage(
+      chatId,
+      "Пожалуйста, авторизуйтесь для продолжения.",
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Авторизоваться", callback_data: "auth" }],
+          ],
+        },
+      }
+    );
+    logger.info(`Inline query answered for user ${chatId}`);
+
+    return;
+  }
+
+  try {
+    const name = ctx.message.text.split(" ").slice(1) || "Новый звонок"; // Название звонка, можете заменить на желаемое
+    const axios = authApi.getAxios();
+    const response = await axios.get<APIResponse<CallsStartResponse>>(
+      "calls.start",
+      {
+        params: {
+          user_id: userId,
+          v: "5.131",
+          access_token: authToken,
+          name,
+        },
+      }
+    );
+
+    logger.info(`response data: ${JSON.stringify(response.data)}`);
+    if (isErrorResponse(response.data)) {
+      logger.error(JSON.stringify(response.data.error));
+      await bot.telegram.sendMessage(
+        chatId,
+        `Произошла ошибка: ${response.data.error.error_msg}`
+      );
+      return;
+    }
+
+    const joinLink = response.data.response.join_link;
+
+    await bot.telegram.sendMessage(chatId, `Звонок "${name}":\n${joinLink}`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: "Присоединиться к звонку", url: joinLink }]],
+      },
+    });
+  } catch (error) {
+    logger.error(error);
+    await bot.telegram.sendMessage(
+      chatId,
+      `Произошла ошибка: ${error.message}`
+    );
+  }
+});
+
 bot.on("inline_query", async (ctx) => {
   const id = ctx.from.id;
   logger.info(`Inline query received from user ${ctx.from.id}`);
