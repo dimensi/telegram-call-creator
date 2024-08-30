@@ -50,7 +50,7 @@ bot.command("create", async (ctx) => {
   }
 
   try {
-    const name = ctx.message.text.split(" ").slice(1) || "Новый звонок"; // Название звонка, можете заменить на желаемое
+    const name = ctx.message.text.split(" ").slice(1).join(' ').trim() || "Новый звонок"; // Название звонка, можете заменить на желаемое
     const axios = authApi.getAxios();
     const response = await axios.get<APIResponse<CallsStartResponse>>(
       "calls.start",
