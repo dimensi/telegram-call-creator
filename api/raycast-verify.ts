@@ -8,7 +8,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   const authId = String(query.state);
   const authApi = await AuthApi.retriveAuthState(authId);
   if (!authApi) {
-    return res.redirect("https://vkcallsBot.t.me/");
+    return res.status(200).send("invalid user_state");
   }
 
   try {
