@@ -27,13 +27,15 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const deepLink = await kv.getdel(`raycast_deeplink:${authId}`);
 
     const updatedUrl = new URL(deepLink as string);
-    updatedUrl.searchParams.set("access_token", authResponse.access_token);
-    updatedUrl.searchParams.set("refresh_token", authResponse.refresh_token);
-    updatedUrl.searchParams.set(
-      "expires_in",
-      authResponse.expires_in.toString()
+    updatedUrl.searchParams.append(
+      "context",
+      JSON.stringify({
+        access_token: authResponse.access_token,
+        refresh_token: authResponse.refresh_token,
+        expires_in: authResponse.expires_in,
+        user_id: authResponse.user_id,
+      })
     );
-    updatedUrl.searchParams.set("user_id", authResponse.user_id.toString());
 
     if (deepLink) {
       return res.status(200).send(`
