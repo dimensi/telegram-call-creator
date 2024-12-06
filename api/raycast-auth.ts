@@ -10,7 +10,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   }
 
   const authId = String(user_state);
-  const authApi = await AuthApi.retriveAuthState(authId);
+  const authApi = await AuthApi.retriveAuthState(authId, "raycast");
   if (!authApi) {
     res.status(400).send("invalid user_state");
     return;
