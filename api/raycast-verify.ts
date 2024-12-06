@@ -6,7 +6,7 @@ import { kv } from "@vercel/kv";
 export default async (req: VercelRequest, res: VercelResponse) => {
   const { query } = req;
   const authId = String(query.state);
-  const authApi = await AuthApi.retriveAuthState(authId);
+  const authApi = await AuthApi.retriveAuthState(authId, "raycast");
   if (!authApi) {
     return res.status(200).send("invalid user_state");
   }
