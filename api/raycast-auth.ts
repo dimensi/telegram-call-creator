@@ -1,9 +1,8 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { AuthApi } from "../AuthApi";
-import { kv } from "@vercel/kv";
 
 export default async (req: VercelRequest, res: VercelResponse) => {
-  const { user_state, deep_link } = req.query;
+  const { user_state } = req.query;
 
   if (!user_state) {
     res.status(400).send("empty user_state");
@@ -11,7 +10,6 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   }
 
   const authId = String(user_state);
-  await kv.set(`raycast_deeplink:${authId}`, deep_link);
   const authApi = await AuthApi.retriveAuthState(authId);
   if (!authApi) {
     res.status(400).send("invalid user_state");
