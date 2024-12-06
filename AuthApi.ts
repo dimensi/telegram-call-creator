@@ -25,7 +25,7 @@ export class AuthApi {
     const authId = generate();
     await kv.set(`${type}_id:${authId}`, this.userId);
     return `https://telegram-calls.dimensi.dev/${
-      type === "telegram" ? "auth" : "raycast-auth"
+      type === "telegram" ? "auth" : "raycast/auth"
     }?user_state=${authId}`;
   }
 
