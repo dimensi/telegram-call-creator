@@ -15,7 +15,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const authResponse = await authApi.verifyAuth(
       authId,
       String(query.code),
-      String(query.device_id)
+      String(query.device_id),
+      "raycast"
     );
 
     logger.info(`"ouath2/auth response data: ${JSON.stringify(authResponse)}"`);
