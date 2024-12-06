@@ -9,10 +9,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
   logger.info(`Received /auth command with parameter from user ${id}`);
 
-  await kv.set(`raycast_deeplink:${id}`, deep_link);
   try {
     return res.json({
-      url: await authApi.generateAuthUrl("raycast"),
+      url: await authApi.generateAuthUrl("raycast", deep_link as string),
     });
   } catch (err) {
     logger.error(err);
