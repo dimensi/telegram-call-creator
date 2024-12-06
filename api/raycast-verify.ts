@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import logger from "../logger";
 import { AuthApi } from "../AuthApi";
+import { kv } from "@vercel/kv";
 
 export default async (req: VercelRequest, res: VercelResponse) => {
   const { query } = req;
@@ -22,6 +23,25 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     const user = await authApi.getUserInfo();
 
     logger.info(`"response data: ${JSON.stringify(user)}"`);
+
+    const deepLink = await kv.getdel(`raycast_deeplink:${authId}`);
+
+    const updatedUrl = new URL(deepLink as string);
+    updatedUrl.searchParams.set("access_token", authResponse.access_token);
+    updatedUrl.searchParams.set("refresh_token", authResponse.refresh_token);
+    updatedUrl.searchParams.set(
+      "expires_in",
+      authResponse.expires_in.toString()
+    );
+    updatedUrl.searchParams.set("user_id", authResponse.user_id.toString());
+
+    if (deepLink) {
+      return res.status(200).send(`
+    <script>
+      window.location.href = "${updatedUrl.toString()}";
+    </script>
+    `);
+    }
 
     return res.json({
       user,

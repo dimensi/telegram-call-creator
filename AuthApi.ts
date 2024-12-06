@@ -42,7 +42,7 @@ export class AuthApi {
     type: "telegram" | "raycast" = "telegram"
   ): Promise<string> {
     const challenge = await pkceChallenge();
-    await kv.set(`challenge:${authId}`, challenge.code_verifier);
+    await kv.set(`${type}_challenge:${authId}`, challenge.code_verifier);
 
     const redirectUrl = new URL("https://id.vk.com/authorize");
     const query = redirectUrl.searchParams;
@@ -69,7 +69,7 @@ export class AuthApi {
     deviceId: string,
     type: "telegram" | "raycast" = "telegram"
   ): Promise<AuthResponse> {
-    const codeVerifier = await kv.getdel(`challenge:${authId}`);
+    const codeVerifier = await kv.getdel(`${type}_challenge:${authId}`);
 
     if (!codeVerifier) {
       throw new Error("Invalid state or code verifier not found");
@@ -100,7 +100,7 @@ export class AuthApi {
 
     const authResponse = { ...data, device_id: deviceId };
     this.userAuthState.save(authResponse);
-    await kv.del(`telegram_id:${authId}`);
+    await kv.del(`${type}_id:${authId}`);
 
     return authResponse;
   }
