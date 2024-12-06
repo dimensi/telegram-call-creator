@@ -9,6 +9,9 @@
   "routes": [
     { "src": "/auth", "dest": "/api/auth.ts" },
     { "src": "/verify", "dest": "/api/verify.ts" },
-    { "src": "/api/bot", "dest": "/api/bot.ts" }
+    { "src": "/api/bot", "dest": "/api/bot.ts" },
+    { "src": "/raycast/auth", "dest": "/api/raycast-auth.ts" },
+    { "src": "/raycast/verify", "dest": "/api/raycast-verify.ts" },
+    { "src": "/raycast/start", "dest": "/api/raycast-start-auth.ts" }
   ]
 }

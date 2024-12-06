@@ -19,10 +19,14 @@ export class AuthApi {
     this.userAuthState = new UserAuthState(userId);
   }
 
-  async generateAuthUrl(): Promise<string> {
+  async generateAuthUrl(
+    type: "telegram" | "raycast" = "telegram"
+  ): Promise<string> {
     const authId = generate();
-    await kv.set(`telegram_id:${authId}`, this.userId);
-    return `https://telegram-calls.dimensi.dev/auth?user_state=${authId}`;
+    await kv.set(`${type}_id:${authId}`, this.userId);
+    return `https://telegram-calls.dimensi.dev/${
+      type === "telegram" ? "auth" : "raycast-auth"
+    }?user_state=${authId}`;
   }
 
   static async retriveAuthState(authId: string): Promise<AuthApi | null> {
@@ -33,7 +37,10 @@ export class AuthApi {
     return new AuthApi(telegramUserId);
   }
 
-  async initiateAuth(authId: string): Promise<string> {
+  async initiateAuth(
+    authId: string,
+    type: "telegram" | "raycast" = "telegram"
+  ): Promise<string> {
     const challenge = await pkceChallenge();
     await kv.set(`challenge:${authId}`, challenge.code_verifier);
 
@@ -41,12 +48,17 @@ export class AuthApi {
     const query = redirectUrl.searchParams;
     query.append("response_type", "code");
     query.append("client_id", process.env.CLIENT_ID as string);
-    query.append("redirect_uri", "https://telegram-calls.dimensi.dev/verify");
+    query.append(
+      "redirect_uri",
+      `https://telegram-calls.dimensi.dev/${
+        type === "telegram" ? "verify" : "raycast/verify"
+      }`
+    );
     query.append("scope", "email phone");
     query.append("state", authId);
     query.append("code_challenge", challenge.code_challenge);
     query.append("code_challenge_method", "s256");
-    query.append("ip", process.env.PROXY_ADDRESS as string);
+    // query.append("ip", process.env.PROXY_ADDRESS as string);
 
     return redirectUrl.toString();
   }
@@ -54,7 +66,8 @@ export class AuthApi {
   async verifyAuth(
     authId: string,
     code: string,
-    deviceId: string
+    deviceId: string,
+    type: "telegram" | "raycast" = "telegram"
   ): Promise<AuthResponse> {
     const codeVerifier = await kv.getdel(`challenge:${authId}`);
 
@@ -72,9 +85,11 @@ export class AuthApi {
         code,
         client_id: process.env.CLIENT_ID,
         device_id: deviceId,
-        redirect_uri: "https://telegram-calls.dimensi.dev/verify",
+        redirect_uri: `https://telegram-calls.dimensi.dev/${
+          type === "telegram" ? "verify" : "raycast/verify"
+        }`,
         state: authId,
-        ip: process.env.PROXY_ADDRESS,
+        // ip: process.env.PROXY_ADDRESS,
       },
       {
         headers: {
@@ -90,7 +105,9 @@ export class AuthApi {
     return authResponse;
   }
 
-  async refreshToken(): Promise<AuthResponse> {
+  async refreshToken(
+    type: "telegram" | "raycast" = "telegram"
+  ): Promise<AuthResponse> {
     const allState = await this.userAuthState.getAll();
     if (!allState) {
       throw new Error("User state not found");
@@ -104,8 +121,10 @@ export class AuthApi {
         client_id: process.env.CLIENT_ID,
         device_id: allState.device_id,
         state: allState.state,
-        ip: process.env.PROXY_ADDRESS,
-        redirect_uri: "https://telegram-calls.dimensi.dev/verify",
+        // ip: process.env.PROXY_ADDRESS,
+        redirect_uri: `https://telegram-calls.dimensi.dev/${
+          type === "telegram" ? "verify" : "raycast/verify"
+        }`,
       },
       {
         headers: {
