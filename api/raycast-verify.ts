@@ -31,6 +31,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
     updatedUrl.searchParams.append(
       "context",
       JSON.stringify({
+        device_id: String(query.device_id),
         access_token: authResponse.access_token,
         refresh_token: authResponse.refresh_token,
         expires_in: authResponse.expires_in,
