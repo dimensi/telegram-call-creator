@@ -3,7 +3,7 @@ import { AuthApi } from "../AuthApi";
 import { kv } from "@vercel/kv";
 
 export default async (req: VercelRequest, res: VercelResponse) => {
-  const { user_state, deep_link } = req.query;
+  const { user_state } = req.query;
 
   if (!user_state) {
     res.status(400).send("empty user_state");
