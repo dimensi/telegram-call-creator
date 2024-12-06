@@ -29,8 +29,11 @@ export class AuthApi {
     }?user_state=${authId}`;
   }
 
-  static async retriveAuthState(authId: string): Promise<AuthApi | null> {
-    const telegramUserId = (await kv.get(`telegram_id:${authId}`)) as string;
+  static async retriveAuthState(
+    authId: string,
+    type: "telegram" | "raycast" = "telegram"
+  ): Promise<AuthApi | null> {
+    const telegramUserId = (await kv.get(`${type}_id:${authId}`)) as string;
     if (!telegramUserId) {
       return null;
     }
