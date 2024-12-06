@@ -11,7 +11,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
   try {
     return res.json({
-      url: await authApi.generateAuthUrl("raycast", deep_link as string),
+      id: await authApi.generateStartAuthId(deep_link as string),
     });
   } catch (err) {
     logger.error(err);

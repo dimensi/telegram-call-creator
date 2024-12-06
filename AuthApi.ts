@@ -33,6 +33,13 @@ export class AuthApi {
     }?user_state=${authId}`;
   }
 
+  async generateStartAuthId(deepLink: string): Promise<string> {
+    const authId = generate();
+    await kv.set(`raycast_id:${authId}`, this.userId);
+    await kv.set(`raycast_deeplink:${authId}`, deepLink);
+    return authId;
+  }
+
   static async retriveAuthState(
     authId: string,
     type: "telegram" | "raycast" = "telegram"
