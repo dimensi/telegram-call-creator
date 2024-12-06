@@ -20,10 +20,14 @@ export class AuthApi {
   }
 
   async generateAuthUrl(
-    type: "telegram" | "raycast" = "telegram"
+    type: "telegram" | "raycast" = "telegram",
+    deepLink?: string
   ): Promise<string> {
     const authId = generate();
     await kv.set(`${type}_id:${authId}`, this.userId);
+    if (deepLink) {
+      await kv.set(`raycast_deeplink:${authId}`, deepLink);
+    }
     return `https://telegram-calls.dimensi.dev/${
       type === "telegram" ? "auth" : "raycast/auth"
     }?user_state=${authId}`;
