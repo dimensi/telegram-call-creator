@@ -39,9 +39,18 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     if (deepLink) {
       return res.status(200).send(`
-    <script>
-      window.location.href = "${updatedUrl.toString()}";
-    </script>
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Redirecting...</title>
+          </head>
+          <body>
+            <p>Redirecting...</p>
+            <script>
+              window.location.href = "${updatedUrl.toString()}";
+            </script>
+          </body>
+        </html>
     `);
     }
 
